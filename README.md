@@ -12,7 +12,7 @@ DEMO：[Utopia Uptime](https://status.utopiaxc.com/)
 
 
 
-### 特性 / Feature / 機能
+## 特性 / Feature / 機能
 
 - 单文件 / Single file /単一ファイル  
 - 支持中英日语 / Multi-language support / 多言語対応  
@@ -22,7 +22,7 @@ DEMO：[Utopia Uptime](https://status.utopiaxc.com/)
 
 
 
-### 配置 / Configuration / 設定
+## 配置 / Configuration / 設定
 
 使用文本编辑器打开文件，修改 `<script id="configurationScript">` 中的 `ApplicationConfiguration`   
 
