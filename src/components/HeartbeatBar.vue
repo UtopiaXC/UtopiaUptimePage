@@ -76,9 +76,9 @@ const lastTime = computed(() => {
     return '';
 });
 
-function formatTime(isoString) {
-    if (!isoString) return '';
-    const date = new Date(isoString);
+function formatTime(timestamp) {
+    if (!timestamp) return '';
+    const date = new Date(timestamp);
     return date.toLocaleString(undefined, {
         month: 'short',
         day: 'numeric',
@@ -87,9 +87,9 @@ function formatTime(isoString) {
     });
 }
 
-function formatFullTime(isoString) {
-    if (!isoString) return '';
-    const date = new Date(isoString);
+function formatFullTime(timestamp) {
+    if (!timestamp) return '';
+    const date = new Date(timestamp);
     return date.toLocaleString(undefined, {
         year: 'numeric',
         month: 'short',

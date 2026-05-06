@@ -151,8 +151,28 @@ KUMA_STATUS_MAP = {0: "offline", 1: "online", 2: "retrying", 3: "maintenance"}
 
 
 def format_heartbeat(row):
+    time_val = None
+    t = row["time"]
+    if t:
+        try:
+            if isinstance(t, str):
+                t_str = t.replace("Z", "+00:00")
+                if " " in t_str and "T" not in t_str:
+                    t_str = t_str.replace(" ", "T")
+                dt = datetime.fromisoformat(t_str)
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=timezone.utc)
+                time_val = int(dt.timestamp() * 1000)
+            elif isinstance(t, datetime):
+                dt = t
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=timezone.utc)
+                time_val = int(dt.timestamp() * 1000)
+        except Exception:
+            pass
+
     result = {
-        "time": str(row["time"]) if row["time"] else None,
+        "time": time_val,
         "status": row["status"],
         "ping": row["ping"] if row["ping"] is not None else 0,
     }
@@ -167,9 +187,9 @@ def format_heartbeat(row):
 # Database API Endpoints (only when ENABLE_DB_MODE=true)
 # ===========================================================
 
-@app.get("/api/monitors")
+@app.get("/api/monitors", deprecated=True)
 async def list_monitors():
-    """List all monitors with basic metadata."""
+    """List all monitors with basic metadata. (Deprecated: Use /api/dashboard instead)"""
     if not database:
         raise HTTPException(status_code=503, detail="Database mode is not enabled")
     query = "SELECT * FROM monitor WHERE active = 1"
@@ -254,7 +274,6 @@ async def list_monitors():
                     valid_to = tls_info.get("valid_to")
                     if valid_to:
                         try:
-                            from datetime import datetime, timezone
                             expiry_date = datetime.fromisoformat(valid_to.replace("Z", "+00:00"))
                             days_left = (expiry_date - datetime.now(timezone.utc)).days
                             cert_expiry_days = max(0, days_left)
@@ -268,7 +287,6 @@ async def list_monitors():
         try:
             domain_expiry_val = r.get("domain_name_expiry_date")
             if domain_expiry_val:
-                from datetime import datetime, timezone
                 expiry_date = datetime.fromisoformat(str(domain_expiry_val).replace("Z", "+00:00"))
                 days_left = (expiry_date - datetime.now(timezone.utc)).days
                 domain_expiry_days = max(0, days_left)
@@ -296,14 +314,14 @@ async def list_monitors():
     return {"monitors": monitors}
 
 
-@app.get("/api/monitors/{monitor_id}/heartbeats")
+@app.get("/api/monitors/{monitor_id}/heartbeats", deprecated=True)
 async def get_heartbeats(
     monitor_id: int,
     range_days: int = Query(default=7, ge=1, le=365, description="Number of days to look back"),
     limit: int = Query(default=50000, ge=10, le=100000, description="Maximum number of heartbeat records"),
 ):
     """
-    Get heartbeat data for a specific monitor.
+    Get heartbeat data for a specific monitor. (Deprecated: Use /api/dashboard instead)
     Returns heartbeats within the last `range_days` days, limited to `limit` records.
     Also returns computed uptime percentage for the range.
     """
@@ -342,6 +360,165 @@ async def get_heartbeats(
         "uptime": uptime,
         "heartbeats": heartbeats
     }
+
+@app.get("/api/dashboard")
+async def get_dashboard(
+    range_days: int = Query(default=7, ge=1, le=365, description="Number of days to look back"),
+    limit: int = Query(default=50000, ge=10, le=100000, description="Maximum number of heartbeat records per monitor"),
+):
+    """
+    Unified endpoint to get all monitors and their heartbeats in a single request.
+    """
+    if not database:
+        raise HTTPException(status_code=503, detail="Database mode is not enabled")
+    
+    # 1. Fetch monitors
+    query = "SELECT * FROM monitor WHERE active = 1"
+    try:
+        rows = await database.fetch_all(query)
+    except Exception as e:
+        print(f"Error fetching monitors: {e}")
+        return {"monitors": []}
+        
+    groups = {row["id"]: dict(row) for row in rows if dict(row).get("type") == "group"}
+
+    def get_sort_key(row):
+        r = dict(row)
+        parent_id = r.get("parent")
+        monitor_id = r.get("id") or 0
+        if parent_id and parent_id in groups:
+            group_weight = groups[parent_id].get("weight") or 0
+            return (0, group_weight, parent_id, monitor_id)
+        else:
+            return (1, 0, 0, monitor_id)
+            
+    sorted_rows = sorted(rows, key=get_sort_key)
+    active_monitor_ids = [r["id"] for r in sorted_rows if dict(r).get("type") != "group"]
+
+    if not active_monitor_ids:
+        return {"monitors": []}
+
+    # 2. Fetch tags
+    tags_query = "SELECT t.name, t.color, mt.monitor_id FROM tag t JOIN monitor_tag mt ON mt.tag_id = t.id"
+    tags_rows = []
+    try:
+        tags_rows = await database.fetch_all(tags_query)
+    except Exception:
+        pass
+    tags_by_monitor = defaultdict(list)
+    for t in tags_rows:
+        tags_by_monitor[t["monitor_id"]].append({"name": t["name"], "color": t["color"]})
+
+    # 3. Fetch TLS info
+    tls_query = "SELECT monitor_id, info_json FROM monitor_tls_info WHERE monitor_id IN (" + ",".join("?" * len(active_monitor_ids)) + ") ORDER BY id DESC"
+    # sqlite supports ? but mysql uses %s. We can just use sequential queries for tls as it's not too heavy or rely on fetch_all if we format query correctly.
+    # To be safe cross-db, we'll fetch one by one or fetch all and group.
+    tls_query = "SELECT monitor_id, info_json FROM monitor_tls_info ORDER BY id ASC" # order by asc so the last one overwrites in dict
+    tls_info_by_monitor = {}
+    try:
+        tls_rows = await database.fetch_all(tls_query)
+        for row in tls_rows:
+            tls_info_by_monitor[row["monitor_id"]] = row["info_json"]
+    except Exception:
+        pass
+
+    # 4. Fetch all recent heartbeats for active monitors
+    since = datetime.now(timezone.utc) - timedelta(days=range_days)
+    since_str = since.strftime("%Y-%m-%d %H:%M:%S")
+    
+    hb_query = """
+        SELECT monitor_id, time, status, ping
+        FROM heartbeat
+        WHERE time >= :since
+        ORDER BY time DESC
+    """
+    try:
+        hb_rows = await database.fetch_all(hb_query, {"since": since_str})
+    except Exception:
+        hb_rows = []
+        
+    # Group heartbeats by monitor, respecting limit
+    heartbeats_by_monitor = defaultdict(list)
+    latest_hb_by_monitor = {}
+    for r in hb_rows:
+        mid = r["monitor_id"]
+        if len(heartbeats_by_monitor[mid]) < limit:
+            heartbeats_by_monitor[mid].append(r)
+        if mid not in latest_hb_by_monitor:
+            latest_hb_by_monitor[mid] = r
+
+    monitors = []
+    for row in sorted_rows:
+        r = dict(row)
+        monitor_type = r.get("type") or ""
+        if monitor_type == "group":
+            continue
+
+        monitor_id = r["id"]
+        latest_hb = latest_hb_by_monitor.get(monitor_id)
+
+        # Build group info
+        group_name = ""
+        parent_id = r.get("parent")
+        if parent_id and parent_id in groups:
+            group_name = groups[parent_id].get("name", "")
+
+        # TLS info
+        cert_expiry_days = None
+        info_json = tls_info_by_monitor.get(monitor_id)
+        if info_json:
+            import json
+            try:
+                tls_info = json.loads(info_json)
+                if isinstance(tls_info, dict):
+                    valid_to = tls_info.get("valid_to")
+                    if valid_to:
+                        expiry_date = datetime.fromisoformat(valid_to.replace("Z", "+00:00"))
+                        days_left = (expiry_date - datetime.now(timezone.utc)).days
+                        cert_expiry_days = max(0, days_left)
+            except Exception:
+                pass
+
+        # Domain expiry
+        domain_expiry_days = None
+        domain_expiry_val = r.get("domain_name_expiry_date")
+        if domain_expiry_val:
+            try:
+                expiry_date = datetime.fromisoformat(str(domain_expiry_val).replace("Z", "+00:00"))
+                days_left = (expiry_date - datetime.now(timezone.utc)).days
+                domain_expiry_days = max(0, days_left)
+            except Exception:
+                pass
+
+        # Heartbeats
+        raw_hbs = heartbeats_by_monitor.get(monitor_id, [])
+        formatted_hbs = [format_heartbeat(hb) for hb in reversed(raw_hbs)]
+        
+        total_hb = len(formatted_hbs)
+        up_count = sum(1 for h in formatted_hbs if h["status"] == 1)
+        uptime = round((up_count / total_hb) * 100, 4) if total_hb > 0 else 0
+
+        monitors.append({
+            "id": monitor_id,
+            "name": r.get("name", f"Monitor {monitor_id}"),
+            "url": r.get("url"),
+            "type": monitor_type,
+            "method": r.get("method"),
+            "active": r.get("active", 1),
+            "interval": r.get("interval", 60),
+            "hostname": r.get("hostname"),
+            "port": r.get("port"),
+            "status": latest_hb["status"] if latest_hb else 0,
+            "ping": latest_hb["ping"] if latest_hb else 0,
+            "group": group_name,
+            "tags": tags_by_monitor.get(monitor_id, []),
+            "domain_expiry_days": domain_expiry_days,
+            "cert_expiry_days": cert_expiry_days,
+            "uptime": uptime,
+            "heartbeats": formatted_hbs
+        })
+
+    return {"monitors": monitors}
 
 
 # ===========================================================

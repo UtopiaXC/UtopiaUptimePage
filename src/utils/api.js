@@ -320,32 +320,22 @@ export async function fetchKumaServerData(sourceConfig) {
     const serverUrl = (sourceConfig.serverUrl || '').replace(/\/+$/, '');
 
     try {
-        // Fetch monitors list from the Utopia server
-        const monitorsUrl = `${serverUrl}/api/monitors`;
-        const monitorsResponse = await fetch(monitorsUrl);
-        const monitorsData = await monitorsResponse.json();
-
         const rangeDays = sourceConfig.rangeDays || 7;
+        const dashboardUrl = `${serverUrl}/api/dashboard?range_days=${rangeDays}&limit=50000`;
+        const dashboardResponse = await fetch(dashboardUrl);
+        const dashboardData = await dashboardResponse.json();
+
         const monitors = [];
 
-        for (const monitorMeta of (monitorsData.monitors || [])) {
+        for (const monitorMeta of (dashboardData.monitors || [])) {
             const monitorId = monitorMeta.id;
-            // Fetch detailed heartbeats for each monitor (up to ~34 days of 1-min intervals)
-            const detailUrl = `${serverUrl}/api/monitors/${monitorId}/heartbeats?range_days=${rangeDays}&limit=50000`;
-            let heartbeats = [];
-            let uptimePercent = 0;
-            try {
-                const detailResponse = await fetch(detailUrl);
-                const detailData = await detailResponse.json();
-                heartbeats = (detailData.heartbeats || []).map(h => ({
-                    time: h.time,
-                    status: KUMA_STATUS_MAP[h.status] || 'unknown',
-                    latency: h.ping || 0
-                }));
-                uptimePercent = detailData.uptime || 0;
-            } catch (e) {
-                console.warn(`Could not fetch heartbeats for monitor ${monitorId}:`, e);
-            }
+            
+            const heartbeats = (monitorMeta.heartbeats || []).map(h => ({
+                time: h.time,
+                status: KUMA_STATUS_MAP[h.status] || 'unknown',
+                latency: h.ping || 0
+            }));
+            const uptimePercent = monitorMeta.uptime || 0;
 
             const latencyValues = heartbeats.map(h => h.latency).filter(l => l > 0);
             const avgLatency = latencyValues.length > 0
