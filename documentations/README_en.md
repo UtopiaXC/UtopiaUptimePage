@@ -1,6 +1,6 @@
 # Utopia Uptime Page
 
-Languages: **English** | [简体中文](documentations/README_zh_CN.md) | [繁體中文](documentations/README_zh_TW.md) | [日本語](documentations/README_ja.md)
+Languages: **English** | [简体中文](README_zh_CN.md) | [繁體中文](README_zh_TW.md) | [日本語](README_ja.md)
 
 A website availability monitoring dashboard frontend, supporting [Uptime Robot](https://uptimerobot.com/) and [Uptime Kuma](https://uptimekuma.org/), pure static deployment.  
 You can visit the [DEMO](https://status.utopiaxc.cn/).
@@ -11,7 +11,7 @@ You can visit the [DEMO](https://status.utopiaxc.cn/).
 - **Kuma Multi-functional Database Script**: Includes an optional Python FastAPI bridge (`Utopia Kuma Server`) to solve Kuma's CORS issues and fetch extended historical data directly from Kuma's database.
 - **i18n Support**: Full native support for English, Simplified Chinese, Traditional Chinese, and Japanese.
 
-![Utopia Uptime Page Dashboard](./documentations/assets/demo.png)
+![Utopia Uptime Page Dashboard](./assets/demo.png)
 
 ## 2. Deployment
 

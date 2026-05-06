@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Config Generator - Utopia Uptime Page</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0c0e14;--bg2:#151822;--bg3:#1c1f2e;--bg4:#252939;
+  --text:#e2e8f0;--text2:#94a3b8;--text3:#64748b;
+  --border:#1e2235;--border2:#2e3348;
+  --accent:#818cf8;--accent-bg:rgba(129,140,248,0.1);--accent-border:rgba(129,140,248,0.2);
+  --success:#4ade80;--danger:#f87171;--warning:#fbbf24;
+  --radius:10px;--radius-lg:14px;
+}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);line-height:1.6;min-height:100vh}
+.container{max-width:760px;margin:0 auto;padding:24px 20px;position:relative;}
+.lang-selector{position:absolute;top:24px;right:20px;}
+h1{font-size:24px;font-weight:700;margin-bottom:4px;background:linear-gradient(135deg,var(--text),var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.subtitle{font-size:13px;color:var(--text3);margin-bottom:28px;max-width:80%;}
+.section{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;margin-bottom:16px}
+.section-title{font-size:14px;font-weight:600;color:var(--text);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.form-row{margin-bottom:14px}
+.form-row:last-child{margin-bottom:0}
+label{display:block;font-size:12px;font-weight:500;color:var(--text2);margin-bottom:5px}
+input,select,textarea{width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-family:inherit;font-size:13px;outline:none;transition:border-color .2s}
+input:focus,select:focus,textarea:focus{border-color:var(--accent-border);box-shadow:0 0 0 3px var(--accent-bg)}
+textarea{resize:vertical;min-height:60px;font-family:'JetBrains Mono',monospace,sans-serif}
+select{appearance:none;-webkit-appearance:none;cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center}
+.row-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:600px){.row-2{grid-template-columns:1fr}}
+.btn{padding:9px 18px;border-radius:8px;font-size:13px;font-weight:600;border:none;cursor:pointer;font-family:inherit;transition:all .15s;display:inline-flex;align-items:center;gap:6px}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{opacity:.9;transform:translateY(-1px)}
+.btn-secondary{background:var(--bg3);color:var(--text2);border:1px solid var(--border)}
+.btn-secondary:hover{background:var(--bg4);color:var(--text)}
+.btn-danger{background:rgba(248,113,113,.1);color:var(--danger);border:1px solid rgba(248,113,113,.25)}
+.btn-danger:hover{background:rgba(248,113,113,.2)}
+.btn-sm{padding:6px 12px;font-size:12px}
+.source-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:10px;position:relative;transition:transform 0.2s}
+.source-card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.source-card-title{font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px}
+.source-badge{font-size:10px;padding:2px 8px;border-radius:99px;font-weight:600}
+.source-badge.ur{background:rgba(129,140,248,.1);color:var(--accent);border:1px solid var(--accent-border)}
+.source-badge.kuma{background:rgba(74,222,128,.1);color:var(--success);border:1px solid rgba(74,222,128,.25)}
+.source-badge.kuma-server{background:rgba(251,191,36,.1);color:var(--warning);border:1px solid rgba(251,191,36,.25)}
+.output-section{margin-top:20px}
+.output-area{width:100%;min-height:200px;padding:14px;border-radius:8px;background:var(--bg3);border:1px solid var(--border);color:var(--accent);font-family:'JetBrains Mono',ui-monospace,Consolas,monospace;font-size:12px;line-height:1.6;resize:vertical}
+.output-actions{display:flex;gap:8px;margin-top:10px}
+.copied-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--success);color:#000;padding:8px 20px;border-radius:99px;font-size:13px;font-weight:600;opacity:0;transition:opacity .3s;pointer-events:none;z-index:999}
+.copied-toast.show{opacity:1}
+.import-section{display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap}
+.import-section input[type="file"]{display:none}
+.help-text{font-size:11px;color:var(--text3);margin-top:4px}
+.empty-hint{text-align:center;padding:20px;color:var(--text3);font-size:13px;border:1px dashed var(--border);border-radius:var(--radius);margin-bottom:10px}
+.source-actions{display:flex;gap:6px;}
+@media(max-width:480px){.lang-selector{top:16px;right:16px;}}
+</style>
+</head>
+<body>
+<div class="container">
+    <div class="lang-selector">
+        <select id="langSelect" class="btn btn-secondary btn-sm" style="padding: 4px 24px 4px 8px; width: auto;" onchange="changeLang(this.value)">
+            <option value="en">English</option>
+            <option value="zh_CN">简体中文</option>
+            <option value="zh_TW">繁體中文</option>
+            <option value="ja">日本語</option>
+        </select>
+    </div>
+
+    <h1 data-i18n="title">Config Generator</h1>
+    <p class="subtitle" data-i18n="subtitle">Generate config.js for Utopia Uptime Page</p>
+
+    <!-- Import -->
+    <div class="section">
+        <div class="section-title" data-i18n="importTitle">Import Existing Config</div>
+        <div class="import-section">
+            <button class="btn btn-secondary btn-sm" onclick="document.getElementById('importFile').click()" data-i18n="importBtn">Select config.js file</button>
+            <input type="file" id="importFile" accept=".js,.json" onchange="importConfig(event)">
+            <span id="importStatus" style="font-size:12px;color:var(--text3)"></span>
+        </div>
+        <p class="help-text" data-i18n="importHelp">Supports importing existing config.js file, which will automatically fill the form below</p>
+    </div>
+
+    <!-- Basic Settings -->
+    <div class="section">
+        <div class="section-title" data-i18n="basicSettings">Basic Settings</div>
+        <div class="form-row">
+            <label for="cfgTitle" data-i18n="pageTitle">Page Title</label>
+            <input id="cfgTitle" type="text" data-i18n-ph="pageTitlePh" placeholder="e.g. Service Status">
+        </div>
+        <div class="form-row">
+            <label for="cfgFooter" data-i18n="pageFooter">Footer Info (HTML supported)</label>
+            <input id="cfgFooter" type="text" data-i18n-ph="pageFooterPh" placeholder='e.g. Copyright © <a href="https://github.com/UtopiaXC">UtopiaXC</a>'>
+        </div>
+        <div class="form-row">
+            <label for="cfgDefaultView" data-i18n="defaultView">Default View</label>
+            <select id="cfgDefaultView">
+                <option value="card" data-i18n="viewCard">Card View</option>
+                <option value="list" data-i18n="viewList">List View</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Sources -->
+    <div class="section">
+        <div class="section-title" data-i18n="sourcesConfig">Data Sources Configuration</div>
+        <div id="sourcesContainer">
+            <div class="empty-hint" id="emptyHint" data-i18n="emptyHint">No data sources, please click buttons below to add</div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+            <button class="btn btn-secondary btn-sm" onclick="addSource('uptimerobot')" data-i18n="addUR">+ Uptime Robot</button>
+            <button class="btn btn-secondary btn-sm" onclick="addSource('kuma')" data-i18n="addKuma">+ Uptime Kuma</button>
+            <button class="btn btn-secondary btn-sm" onclick="addSource('kuma-server')" data-i18n="addKumaServer">+ Utopia Kuma Server</button>
+        </div>
+    </div>
+
+    <!-- Output -->
+    <div class="section output-section">
+        <div class="section-title" data-i18n="outputSection">Generation Result</div>
+        <button class="btn btn-primary" onclick="generateConfig()" style="margin-bottom:12px" data-i18n="btnGenerate">Generate config.js</button>
+        <textarea id="outputArea" class="output-area" readonly data-i18n-ph="phOutput" placeholder="Click button above to generate config..."></textarea>
+        <div class="output-actions">
+            <button class="btn btn-secondary btn-sm" onclick="copyOutput()" data-i18n="btnCopy">Copy</button>
+            <button class="btn btn-secondary btn-sm" onclick="downloadOutput()" data-i18n="btnDownload">Download config.js</button>
+        </div>
+    </div>
+</div>
+
+<div id="copiedToast" class="copied-toast" data-i18n="copied">Copied to clipboard</div>
+
+<script>
+const i18nDict = {
+    en: {
+        title: 'Config Generator',
+        subtitle: 'Generate config.js configuration file for Utopia Uptime Page monitoring dashboard',
+        importTitle: 'Import Existing Config',
+        importBtn: 'Select config.js file',
+        importHelp: 'Supports importing existing config.js file, which will automatically fill the form below',
+        importSuccess: 'Import successful',
+        importFail: 'Import failed: ',
+        basicSettings: 'Basic Settings',
+        pageTitle: 'Page Title',
+        pageTitlePh: 'e.g. Service Status',
+        pageFooter: 'Footer Info (HTML supported)',
+        pageFooterPh: 'e.g. Copyright © <a href="https://github.com/UtopiaXC">UtopiaXC</a>',
+        defaultView: 'Default View',
+        viewCard: 'Card View',
+        viewList: 'List View',
+        sourcesConfig: 'Data Sources Configuration',
+        emptyHint: 'No data sources, please click buttons below to add',
+        addUR: '+ Uptime Robot',
+        addKuma: '+ Uptime Kuma',
+        addKumaServer: '+ Utopia Kuma Server',
+        outputSection: 'Generation Result',
+        btnGenerate: 'Generate config.js',
+        phOutput: 'Click button above to generate config...',
+        btnCopy: 'Copy',
+        btnDownload: 'Download config.js',
+        copied: 'Copied to clipboard',
+        srcTitle: 'Source',
+        btnUp: '↑',
+        btnDown: '↓',
+        btnDelete: 'Delete',
+        srcName: 'Source Name',
+        srcNamePh: 'Display name',
+        srcAnn: 'Announcement (Markdown, optional)',
+        srcAnnPh: 'Markdown formatted announcement...',
+        lblApiKey: 'Readonly API Key',
+        lblRange: 'Lookback Days (Last N days)',
+        lblRefresh: 'Auto Refresh Interval (seconds)',
+        lblPageUrl: 'Status Page URL',
+        lblPageUrlHint: 'Input frontend URL of Kuma public status page, e.g. http://192.168.2.6:3001/status/jp',
+        lblProxyUrl: 'CORS Proxy URL (Optional)',
+        lblProxyUrlHint: 'If Kuma has CORS issues, input Utopia Server address as proxy. Leave blank for direct connection',
+        lblServerUrl: 'Utopia Server URL',
+        lblServerUrlHint: 'Address of Utopia Kuma Server (Python FastAPI)'
+    },
+    zh_CN: {
+        title: '配置生成器',
+        subtitle: '生成 config.js 配置文件，用于 Utopia Uptime Page 监控面板',
+        importTitle: '导入已有配置',
+        importBtn: '选择 config.js 文件',
+        importHelp: '支持导入已有的 config.js 文件，导入后将自动填充下方表单',
+        importSuccess: '导入成功',
+        importFail: '导入失败: ',
+        basicSettings: '基础设置',
+        pageTitle: '页面标题',
+        pageTitlePh: '例如: Service Status',
+        pageFooter: '页脚信息 (支持 HTML)',
+        pageFooterPh: '例如: Copyright © <a href="https://github.com/UtopiaXC">UtopiaXC</a>',
+        defaultView: '默认视图',
+        viewCard: '卡片视图',
+        viewList: '列表视图',
+        sourcesConfig: '数据来源配置',
+        emptyHint: '暂无数据来源，请点击下方按钮添加',
+        addUR: '+ Uptime Robot',
+        addKuma: '+ Uptime Kuma',
+        addKumaServer: '+ Utopia Kuma Server',
+        outputSection: '生成结果',
+        btnGenerate: '生成 config.js',
+        phOutput: '点击上方按钮生成配置...',
+        btnCopy: '复制',
+        btnDownload: '下载 config.js',
+        copied: '已复制到剪贴板',
+        srcTitle: '来源',
+        btnUp: '↑',
+        btnDown: '↓',
+        btnDelete: '删除',
+        srcName: '来源名称',
+        srcNamePh: '显示名称',
+        srcAnn: '公告 (Markdown，可为空)',
+        srcAnnPh: '支持 Markdown 格式的公告内容...',
+        lblApiKey: 'Readonly API Key',
+        lblRange: '回溯天数 (近N天数据)',
+        lblRefresh: '自动刷新间隔 (秒)',
+        lblPageUrl: '状态页面地址',
+        lblPageUrlHint: '输入 Kuma 公开状态页面的前端地址，如 http://192.168.2.6:3001/status/jp',
+        lblProxyUrl: 'CORS 代理地址 (可选)',
+        lblProxyUrlHint: '如果 Kuma 存在跨域问题，填写 Utopia Server 地址作为代理。留空则直连 Kuma',
+        lblServerUrl: 'Utopia Server 地址',
+        lblServerUrlHint: 'Utopia Kuma Server (Python FastAPI) 的地址'
+    },
+    zh_TW: {
+        title: '配置產生器',
+        subtitle: '產生 config.js 設定檔，用於 Utopia Uptime Page 監控面板',
+        importTitle: '匯入現有設定',
+        importBtn: '選擇 config.js 檔案',
+        importHelp: '支援匯入已有的 config.js 檔案，匯入後將自動填寫下方表單',
+        importSuccess: '匯入成功',
+        importFail: '匯入失敗: ',
+        basicSettings: '基礎設定',
+        pageTitle: '頁面標題',
+        pageTitlePh: '例如: Service Status',
+        pageFooter: '頁尾資訊 (支援 HTML)',
+        pageFooterPh: '例如: Copyright © <a href="https://github.com/UtopiaXC">UtopiaXC</a>',
+        defaultView: '預設視圖',
+        viewCard: '卡片視圖',
+        viewList: '列表視圖',
+        sourcesConfig: '資料來源配置',
+        emptyHint: '暫無資料來源，請點擊下方按鈕新增',
+        addUR: '+ Uptime Robot',
+        addKuma: '+ Uptime Kuma',
+        addKumaServer: '+ Utopia Kuma Server',
+        outputSection: '產生結果',
+        btnGenerate: '產生 config.js',
+        phOutput: '點擊上方按鈕產生配置...',
+        btnCopy: '複製',
+        btnDownload: '下載 config.js',
+        copied: '已複製到剪貼簿',
+        srcTitle: '來源',
+        btnUp: '↑',
+        btnDown: '↓',
+        btnDelete: '刪除',
+        srcName: '來源名稱',
+        srcNamePh: '顯示名稱',
+        srcAnn: '公告 (Markdown，可為空)',
+        srcAnnPh: '支援 Markdown 格式的公告內容...',
+        lblApiKey: 'Readonly API Key',
+        lblRange: '回溯天數 (近N天資料)',
+        lblRefresh: '自動更新間隔 (秒)',
+        lblPageUrl: '狀態頁面地址',
+        lblPageUrlHint: '輸入 Kuma 公開狀態頁面的前端地址，如 http://192.168.2.6:3001/status/jp',
+        lblProxyUrl: 'CORS 代理地址 (可選)',
+        lblProxyUrlHint: '如果 Kuma 存在跨域問題，填寫 Utopia Server 地址作為代理。留空則直連 Kuma',
+        lblServerUrl: 'Utopia Server 地址',
+        lblServerUrlHint: 'Utopia Kuma Server (Python FastAPI) 的地址'
+    },
+    ja: {
+        title: '設定ジェネレーター',
+        subtitle: 'Utopia Uptime Page 監視ダッシュボード用の config.js ファイルを生成します',
+        importTitle: '既存の設定をインポート',
+        importBtn: 'config.js を選択',
+        importHelp: '既存の config.js ファイルのインポートをサポートし、以下のフォームに自動入力します',
+        importSuccess: 'インポートに成功しました',
+        importFail: 'インポート失敗: ',
+        basicSettings: '基本設定',
+        pageTitle: 'ページタイトル',
+        pageTitlePh: '例: Service Status',
+        pageFooter: 'フッター情報 (HTML対応)',
+        pageFooterPh: '例: Copyright © <a href="https://github.com/UtopiaXC">UtopiaXC</a>',
+        defaultView: 'デフォルトビュー',
+        viewCard: 'カードビュー',
+        viewList: 'リストビュー',
+        sourcesConfig: 'データソース設定',
+        emptyHint: 'データソースがありません。下のボタンをクリックして追加してください',
+        addUR: '+ Uptime Robot',
+        addKuma: '+ Uptime Kuma',
+        addKumaServer: '+ Utopia Kuma Server',
+        outputSection: '生成結果',
+        btnGenerate: 'config.js を生成',
+        phOutput: '上のボタンをクリックして設定を生成します...',
+        btnCopy: 'コピー',
+        btnDownload: 'config.js をダウンロード',
+        copied: 'クリップボードにコピーしました',
+        srcTitle: 'ソース',
+        btnUp: '↑',
+        btnDown: '↓',
+        btnDelete: '削除',
+        srcName: 'ソース名',
+        srcNamePh: '表示名',
+        srcAnn: 'お知らせ (Markdown, 任意)',
+        srcAnnPh: 'Markdown フォーマットのお知らせ...',
+        lblApiKey: 'Readonly API Key',
+        lblRange: '遡る日数 (直近N日間)',
+        lblRefresh: '自動更新間隔 (秒)',
+        lblPageUrl: 'ステータスページ URL',
+        lblPageUrlHint: 'Kumaの公開ステータスページのフロントエンドURL (例: http://192.168.2.6:3001/status/jp)',
+        lblProxyUrl: 'CORS プロキシ URL (任意)',
+        lblProxyUrlHint: 'KumaにCORSの問題がある場合は、Utopia Serverのアドレスをプロキシとして入力します。空白の場合は直接接続します',
+        lblServerUrl: 'Utopia Server URL',
+        lblServerUrlHint: 'Utopia Kuma Server (Python FastAPI) のアドレス'
+    }
+};
+
+let currentLang = 'zh_CN';
+let sourceCounter = 0;
+const sourcesContainer = document.getElementById('sourcesContainer');
+const emptyHint = document.getElementById('emptyHint');
+
+function t(key) {
+    return i18nDict[currentLang][key] || key;
+}
+
+function updateI18n() {
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (i18nDict[currentLang][key]) {
+            el.textContent = i18nDict[currentLang][key];
+        }
+    });
+    document.querySelectorAll('[data-i18n-ph]').forEach(el => {
+        const key = el.getAttribute('data-i18n-ph');
+        if (i18nDict[currentLang][key]) {
+            el.placeholder = i18nDict[currentLang][key];
+        }
+    });
+    
+    // Update dynamically generated cards
+    document.querySelectorAll('.source-card').forEach(card => {
+        card.querySelector('.t-delete').textContent = t('btnDelete');
+        card.querySelector('.t-up').textContent = t('btnUp');
+        card.querySelector('.t-down').textContent = t('btnDown');
+        card.querySelector('.t-srcname').textContent = t('srcName');
+        card.querySelector('.src-name').placeholder = t('srcNamePh');
+        card.querySelector('.t-srcann').textContent = t('srcAnn');
+        card.querySelector('.src-announcement').placeholder = t('srcAnnPh');
+        
+        const type = card.dataset.type;
+        if (type === 'uptimerobot') {
+            card.querySelector('.t-apikey').textContent = t('lblApiKey');
+            card.querySelector('.t-range').textContent = t('lblRange');
+            card.querySelector('.t-refresh').textContent = t('lblRefresh');
+        } else if (type === 'kuma') {
+            card.querySelector('.t-pageurl').textContent = t('lblPageUrl');
+            card.querySelector('.t-pageurlhint').textContent = t('lblPageUrlHint');
+            card.querySelector('.t-proxyurl').textContent = t('lblProxyUrl');
+            card.querySelector('.t-proxyurlhint').textContent = t('lblProxyUrlHint');
+            card.querySelector('.t-refresh').textContent = t('lblRefresh');
+        } else if (type === 'kuma-server') {
+            card.querySelector('.t-serverurl').textContent = t('lblServerUrl');
+            card.querySelector('.t-serverurlhint').textContent = t('lblServerUrlHint');
+            card.querySelector('.t-range').textContent = t('lblRange');
+            card.querySelector('.t-refresh').textContent = t('lblRefresh');
+        }
+    });
+}
+
+function changeLang(lang) {
+    currentLang = lang;
+    document.documentElement.lang = lang === 'zh_CN' ? 'zh-CN' : (lang === 'zh_TW' ? 'zh-TW' : lang);
+    updateI18n();
+}
+
+// Auto-detect language
+const browserLang = navigator.language || navigator.userLanguage;
+if (browserLang.toLowerCase().includes('ja')) {
+    document.getElementById('langSelect').value = 'ja';
+    currentLang = 'ja';
+} else if (browserLang.toLowerCase().includes('tw') || browserLang.toLowerCase().includes('hk')) {
+    document.getElementById('langSelect').value = 'zh_TW';
+    currentLang = 'zh_TW';
+} else if (browserLang.toLowerCase().includes('zh')) {
+    document.getElementById('langSelect').value = 'zh_CN';
+    currentLang = 'zh_CN';
+} else {
+    document.getElementById('langSelect').value = 'en';
+    currentLang = 'en';
+}
+changeLang(currentLang);
+
+function updateEmptyHint() {
+    const cards = sourcesContainer.querySelectorAll('.source-card');
+    emptyHint.style.display = cards.length === 0 ? 'block' : 'none';
+}
+
+function addSource(type, prefill) {
+    sourceCounter++;
+    const id = sourceCounter;
+    const card = document.createElement('div');
+    card.className = 'source-card';
+    card.id = 'source-' + id;
+    card.dataset.type = type;
+
+    const pf = prefill || {};
+    const isUR = type === 'uptimerobot';
+    const isKuma = type === 'kuma';
+    const isKumaSrv = type === 'kuma-server';
+
+    let badgeClass = isUR ? 'ur' : (isKumaSrv ? 'kuma-server' : 'kuma');
+    let badgeText = isUR ? 'Uptime Robot' : (isKumaSrv ? 'Utopia Kuma Server' : 'Uptime Kuma');
+    let defaultName = pf.sourceName || badgeText;
+
+    let specificFields = '';
+    if (isUR) {
+        specificFields = `
+        <div class="form-row">
+            <label class="t-apikey">${t('lblApiKey')}</label>
+            <input class="src-apikey" type="text" value="${esc(pf.apiKey || '')}" placeholder="ur_xxxx-xxxxx">
+        </div>
+        <div class="row-2">
+            <div class="form-row">
+                <label class="t-range">${t('lblRange')}</label>
+                <input class="src-rangedays" type="number" value="${pf.rangeDays || 7}" min="1" max="365">
+            </div>
+            <div class="form-row">
+                <label class="t-refresh">${t('lblRefresh')}</label>
+                <input class="src-refresh" type="number" value="${pf.refreshInterval || 300}" min="10">
+            </div>
+        </div>`;
+    } else if (isKuma) {
+        specificFields = `
+        <div class="form-row">
+            <label class="t-pageurl">${t('lblPageUrl')}</label>
+            <input class="src-pageurl" type="text" value="${esc(pf.pageUrl || '')}" placeholder="http://host:port/status/slug">
+            <p class="help-text t-pageurlhint">${t('lblPageUrlHint')}</p>
+        </div>
+        <div class="form-row">
+            <label class="t-proxyurl">${t('lblProxyUrl')}</label>
+            <input class="src-proxyurl" type="text" value="${esc(pf.proxyUrl || '')}" placeholder="http://localhost:55520">
+            <p class="help-text t-proxyurlhint">${t('lblProxyUrlHint')}</p>
+        </div>
+        <div class="form-row">
+            <label class="t-refresh">${t('lblRefresh')}</label>
+            <input class="src-refresh" type="number" value="${pf.refreshInterval || 300}" min="10">
+        </div>`;
+    } else if (isKumaSrv) {
+        specificFields = `
+        <div class="form-row">
+            <label class="t-serverurl">${t('lblServerUrl')}</label>
+            <input class="src-serverurl" type="text" value="${esc(pf.serverUrl || '')}" placeholder="http://host:55520">
+            <p class="help-text t-serverurlhint">${t('lblServerUrlHint')}</p>
+        </div>
+        <div class="row-2">
+            <div class="form-row">
+                <label class="t-range">${t('lblRange')}</label>
+                <input class="src-rangedays" type="number" value="${pf.rangeDays || 7}" min="1" max="365">
+            </div>
+            <div class="form-row">
+                <label class="t-refresh">${t('lblRefresh')}</label>
+                <input class="src-refresh" type="number" value="${pf.refreshInterval || 300}" min="10">
+            </div>
+        </div>`;
+    }
+
+    card.innerHTML = `
+        <div class="source-card-header">
+            <span class="source-card-title">
+                <span class="source-badge ${badgeClass}">${badgeText}</span>
+            </span>
+            <div class="source-actions">
+                <button class="btn btn-secondary btn-sm t-up" onclick="moveSourceUp(${id})">${t('btnUp')}</button>
+                <button class="btn btn-secondary btn-sm t-down" onclick="moveSourceDown(${id})">${t('btnDown')}</button>
+                <button class="btn btn-danger btn-sm t-delete" onclick="removeSource(${id})">${t('btnDelete')}</button>
+            </div>
+        </div>
+        <div class="form-row">
+            <label class="t-srcname">${t('srcName')}</label>
+            <input class="src-name" type="text" value="${esc(defaultName)}" placeholder="${t('srcNamePh')}">
+        </div>
+        ${specificFields}
+        <div class="form-row">
+            <label class="t-srcann">${t('srcAnn')}</label>
+            <textarea class="src-announcement" rows="2" placeholder="${t('srcAnnPh')}">${esc(pf.announcement || '')}</textarea>
+        </div>
+    `;
+    sourcesContainer.appendChild(card);
+    updateEmptyHint();
+}
+
+function esc(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML.replace(/"/g, '&quot;');
+}
+
+function removeSource(id) {
+    const el = document.getElementById('source-' + id);
+    if (el) el.remove();
+    updateEmptyHint();
+}
+
+function moveSourceUp(id) {
+    const el = document.getElementById('source-' + id);
+    if (el && el.previousElementSibling && el.previousElementSibling.classList.contains('source-card')) {
+        el.parentNode.insertBefore(el, el.previousElementSibling);
+    }
+}
+
+function moveSourceDown(id) {
+    const el = document.getElementById('source-' + id);
+    if (el && el.nextElementSibling && el.nextElementSibling.classList.contains('source-card')) {
+        el.parentNode.insertBefore(el.nextElementSibling, el);
+    }
+}
+
+function generateConfig() {
+    const title = document.getElementById('cfgTitle').value || '';
+    const footer = document.getElementById('cfgFooter').value || '';
+    const defaultView = document.getElementById('cfgDefaultView').value || 'card';
+
+    const sourceCards = sourcesContainer.querySelectorAll('.source-card');
+    const sources = [];
+
+    sourceCards.forEach(card => {
+        const type = card.dataset.type;
+        const name = card.querySelector('.src-name').value || '';
+        const refreshEl = card.querySelector('.src-refresh');
+        const refresh = refreshEl ? (parseInt(refreshEl.value) || 300) : 300;
+        const announcement = card.querySelector('.src-announcement').value || '';
+
+        const sourceObj = {
+            sourceType: type,
+            sourceName: name,
+            refreshInterval: refresh,
+            announcement: announcement
+        };
+
+        if (type === 'uptimerobot') {
+            sourceObj.apiKey = card.querySelector('.src-apikey').value || '';
+            sourceObj.rangeDays = parseInt(card.querySelector('.src-rangedays').value) || 7;
+        } else if (type === 'kuma') {
+            sourceObj.pageUrl = card.querySelector('.src-pageurl').value || '';
+            const proxyUrl = card.querySelector('.src-proxyurl')?.value || '';
+            if (proxyUrl) sourceObj.proxyUrl = proxyUrl;
+        } else if (type === 'kuma-server') {
+            sourceObj.serverUrl = card.querySelector('.src-serverurl').value || '';
+            sourceObj.rangeDays = parseInt(card.querySelector('.src-rangedays').value) || 7;
+        }
+
+        sources.push(sourceObj);
+    });
+
+    const configObj = {
+        dashboardTitle: title,
+        footerText: footer,
+        defaultView: defaultView,
+        dataSources: sources
+    };
+
+    const jsonStr = JSON.stringify(configObj, null, 4);
+    const output = 'window.DashboardConfiguration = ' + jsonStr + ';';
+    document.getElementById('outputArea').value = output;
+}
+
+function importConfig(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            let content = e.target.result;
+            const match = content.match(/window\.DashboardConfiguration\s*=\s*(\{[\s\S]*\})\s*;?\s*$/);
+            if (match) {
+                content = match[1];
+            }
+            const config = JSON.parse(content);
+            applyConfig(config);
+            document.getElementById('importStatus').textContent = t('importSuccess');
+            document.getElementById('importStatus').style.color = 'var(--success)';
+        } catch (err) {
+            document.getElementById('importStatus').textContent = t('importFail') + err.message;
+            document.getElementById('importStatus').style.color = 'var(--danger)';
+        }
+        event.target.value = '';
+    };
+    reader.readAsText(file);
+}
+
+function applyConfig(config) {
+    document.getElementById('cfgTitle').value = config.dashboardTitle || '';
+    document.getElementById('cfgFooter').value = config.footerText || '';
+    document.getElementById('cfgDefaultView').value = config.defaultView || 'card';
+
+    const existingCards = sourcesContainer.querySelectorAll('.source-card');
+    existingCards.forEach(c => c.remove());
+    sourceCounter = 0;
+
+    const sources = config.dataSources || [];
+    for (const src of sources) {
+        addSource(src.sourceType || 'uptimerobot', src);
+    }
+    updateEmptyHint();
+}
+
+function copyOutput() {
+    const area = document.getElementById('outputArea');
+    if (!area.value) return;
+    navigator.clipboard.writeText(area.value).then(() => {
+        const toast = document.getElementById('copiedToast');
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 2000);
+    });
+}
+
+function downloadOutput() {
+    const area = document.getElementById('outputArea');
+    if (!area.value) return;
+    const blob = new Blob([area.value], { type: 'text/javascript' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'config.js';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+updateEmptyHint();
+</script>
+</body>
+</html>
