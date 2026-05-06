@@ -30,7 +30,7 @@
     --bg-hover: #e8eaef;
     --bg-active: #dde0e6;
     --bg-overlay: rgba(0, 0, 0, 0.5);
-    --bg-tooltip: rgba(15, 23, 42, 0.92);
+    --bg-tooltip: #ffffff;
     --bg-glass: rgba(255, 255, 255, 0.72);
 
     --text-primary: #0f172a;
@@ -88,7 +88,7 @@
     --bg-hover: #252939;
     --bg-active: #2e3348;
     --bg-overlay: rgba(0, 0, 0, 0.7);
-    --bg-tooltip: rgba(30, 34, 50, 0.96);
+    --bg-tooltip: #1e2235;
     --bg-glass: rgba(21, 24, 34, 0.8);
 
     --text-primary: #e2e8f0;
@@ -322,25 +322,17 @@ button {
     100% { background-position: -200% 0; }
 }
 
-.tooltip-container {
-    position: relative;
-}
-
 .tooltip-content {
-    position: absolute;
-    bottom: calc(100% + 8px);
-    left: 50%;
-    transform: translateX(-50%);
+    position: fixed;
     background: var(--bg-tooltip);
-    color: var(--text-inverse);
+    color: var(--text-primary);
+    border: 1px solid var(--border-primary);
     padding: 8px 12px;
     border-radius: var(--radius-sm);
     font-size: 12px;
     line-height: 1.5;
     white-space: nowrap;
     pointer-events: none;
-    opacity: 0;
-    transition: opacity var(--transition-fast);
     z-index: 1000;
     box-shadow: var(--shadow-lg);
 }
@@ -352,11 +344,7 @@ button {
     left: 50%;
     transform: translateX(-50%);
     border: 5px solid transparent;
-    border-top-color: var(--bg-tooltip);
-}
-
-.tooltip-container:hover .tooltip-content {
-    opacity: 1;
+    border-top-color: var(--border-primary);
 }
 
 @media print {

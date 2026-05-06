@@ -103,9 +103,14 @@ function formatFullTime(isoString) {
 function handleBarHover(index, event) {
     hoveredIndex.value = index;
     const rect = event.target.getBoundingClientRect();
-    const parentRect = event.target.closest('.heartbeat-bars').getBoundingClientRect();
-    const left = rect.left - parentRect.left + rect.width / 2;
-    tooltipStyle.value = { left: `${left}px`, transform: 'translateX(-50%)' };
+    const top = rect.top - 8;
+    const left = rect.left + rect.width / 2;
+    tooltipStyle.value = { 
+        position: 'fixed',
+        top: `${top}px`, 
+        left: `${left}px`, 
+        transform: 'translate(-50%, -100%)' 
+    };
 }
 
 function handleBarLeave() {
@@ -149,26 +154,28 @@ function getStatusLabel(status) {
                 @mouseleave="handleBarLeave"
             ></div>
 
-            <div
-                v-if="hoveredIndex >= 0 && aggregatedBars[hoveredIndex]"
-                class="bar-tooltip"
-                :style="tooltipStyle"
-            >
-                <div class="tooltip-row" v-if="aggregatedBars[hoveredIndex].time">
-                    <span class="tooltip-label">{{ t('time') }}:</span>
-                    <span>{{ formatFullTime(aggregatedBars[hoveredIndex].time) }}</span>
+            <Teleport to="body">
+                <div
+                    v-if="hoveredIndex >= 0 && aggregatedBars[hoveredIndex]"
+                    class="bar-tooltip"
+                    :style="tooltipStyle"
+                >
+                    <div class="tooltip-row" v-if="aggregatedBars[hoveredIndex].time">
+                        <span class="tooltip-label">{{ t('time') }}:</span>
+                        <span>{{ formatFullTime(aggregatedBars[hoveredIndex].time) }}</span>
+                    </div>
+                    <div class="tooltip-row">
+                        <span class="tooltip-label">{{ t('status') }}:</span>
+                        <span class="tooltip-status" :style="{ color: statusColors[aggregatedBars[hoveredIndex].status] }">
+                            {{ getStatusLabel(aggregatedBars[hoveredIndex].status) }}
+                        </span>
+                    </div>
+                    <div class="tooltip-row">
+                        <span class="tooltip-label">{{ t('latency') }}:</span>
+                        <span>{{ aggregatedBars[hoveredIndex].latency }}{{ t('milliseconds') }}</span>
+                    </div>
                 </div>
-                <div class="tooltip-row">
-                    <span class="tooltip-label">{{ t('status') }}:</span>
-                    <span class="tooltip-status" :style="{ color: statusColors[aggregatedBars[hoveredIndex].status] }">
-                        {{ getStatusLabel(aggregatedBars[hoveredIndex].status) }}
-                    </span>
-                </div>
-                <div class="tooltip-row">
-                    <span class="tooltip-label">{{ t('latency') }}:</span>
-                    <span>{{ aggregatedBars[hoveredIndex].latency }}{{ t('milliseconds') }}</span>
-                </div>
-            </div>
+            </Teleport>
         </div>
 
         <div class="heartbeat-timeline">
@@ -195,8 +202,8 @@ function getStatusLabel(status) {
 .heartbeat-bar { flex: 1; min-width: 2px; border-radius: 2px; cursor: pointer; transition: all var(--transition-fast); opacity: 0.85; }
 .heartbeat-bar:hover { opacity: 1; transform: scaleY(1.15); transform-origin: bottom; }
 
-.bar-tooltip { position: absolute; bottom: calc(100% + 10px); background: var(--bg-tooltip); color: var(--text-inverse); padding: 8px 12px; border-radius: var(--radius-sm); font-size: 12px; white-space: nowrap; z-index: 100; box-shadow: var(--shadow-lg); pointer-events: none; }
-.bar-tooltip::after { content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border: 5px solid transparent; border-top-color: var(--bg-tooltip); }
+.bar-tooltip { position: fixed; background: var(--bg-tooltip); color: var(--text-primary); border: 1px solid var(--border-primary); padding: 8px 12px; border-radius: var(--radius-sm); font-size: 12px; white-space: nowrap; z-index: 1000; box-shadow: var(--shadow-lg); pointer-events: none; }
+.bar-tooltip::after { content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border: 5px solid transparent; border-top-color: var(--border-primary); }
 .tooltip-row { display: flex; gap: 6px; line-height: 1.6; }
 .tooltip-label { opacity: 0.7; }
 .tooltip-status { font-weight: 600; }

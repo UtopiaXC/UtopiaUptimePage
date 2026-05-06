@@ -55,6 +55,20 @@ const hiddenBadges = computed(() => {
 });
 
 const hiddenCount = computed(() => hiddenBadges.value.length);
+
+const tooltipStyle = ref({});
+function handleMouseEnter(event) {
+    showOverflowTooltip.value = true;
+    const rect = event.target.getBoundingClientRect();
+    const top = rect.top - 8;
+    const left = rect.left + rect.width / 2;
+    tooltipStyle.value = {
+        position: 'fixed',
+        top: `${top}px`,
+        left: `${left}px`,
+        transform: 'translate(-50%, -100%)'
+    };
+}
 </script>
 
 <template>
@@ -69,16 +83,18 @@ const hiddenCount = computed(() => hiddenBadges.value.length);
         </span>
         <span
             v-if="hiddenCount > 0"
-            class="badge badge-overflow tooltip-container"
-            @mouseenter="showOverflowTooltip = true"
+            class="badge badge-overflow"
+            @mouseenter="handleMouseEnter($event)"
             @mouseleave="showOverflowTooltip = false"
         >
             +{{ hiddenCount }}
-            <span class="tooltip-content overflow-tooltip" v-show="showOverflowTooltip">
-                <span v-for="(badge, index) in hiddenBadges" :key="index" class="overflow-badge">
-                    {{ badge.label }}
+            <Teleport to="body">
+                <span class="tooltip-content overflow-tooltip" v-show="showOverflowTooltip" :style="tooltipStyle">
+                    <span v-for="(badge, index) in hiddenBadges" :key="index" class="overflow-badge">
+                        {{ badge.label }}
+                    </span>
                 </span>
-            </span>
+            </Teleport>
         </span>
     </div>
 </template>

@@ -199,7 +199,10 @@ function handleMouseMove(event) {
     if (closestPoint && closestDist < 30) {
         const x = paddingLeft + ((closestPoint.time.getTime() - minTime) / timeRange) * drawWidth;
         tooltipData.value = closestPoint;
-        tooltipStyle.value = { left: x + 'px', transform: 'translateX(-50%)' };
+        const containerRect = containerRef.value.getBoundingClientRect();
+        const tooltipX = containerRect.left + x;
+        const tooltipY = containerRect.top + 4;
+        tooltipStyle.value = { position: 'fixed', left: tooltipX + 'px', top: tooltipY + 'px', transform: 'translateX(-50%)' };
     } else {
         tooltipData.value = null;
     }
@@ -218,10 +221,12 @@ function formatTooltipTime(date) {
         <div v-if="dataPoints.length < 2" class="chart-empty">
             <span>No latency data</span>
         </div>
-        <div v-if="tooltipData" class="chart-tooltip" :style="tooltipStyle">
-            <div class="chart-tooltip-time">{{ formatTooltipTime(tooltipData.time) }}</div>
-            <div class="chart-tooltip-value">{{ tooltipData.latency }}ms</div>
-        </div>
+        <Teleport to="body">
+            <div v-if="tooltipData" class="chart-tooltip" :style="tooltipStyle">
+                <div class="chart-tooltip-time">{{ formatTooltipTime(tooltipData.time) }}</div>
+                <div class="chart-tooltip-value">{{ tooltipData.latency }}ms</div>
+            </div>
+        </Teleport>
     </div>
 </template>
 
@@ -229,7 +234,7 @@ function formatTooltipTime(date) {
 .latency-chart { position: relative; width: 100%; background: var(--bg-tertiary); border-radius: var(--radius-md); border: 1px solid var(--border-primary); overflow: hidden; cursor: crosshair; min-height: 60px; }
 .latency-chart canvas { display: block; }
 .chart-empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--text-tertiary); font-size: 13px; }
-.chart-tooltip { position: absolute; top: 4px; background: var(--bg-tooltip); color: var(--text-inverse); padding: 6px 10px; border-radius: var(--radius-sm); font-size: 11px; pointer-events: none; z-index: 10; box-shadow: var(--shadow-md); white-space: nowrap; }
+.chart-tooltip { position: fixed; background: var(--bg-tooltip); color: var(--text-primary); border: 1px solid var(--border-primary); padding: 6px 10px; border-radius: var(--radius-sm); font-size: 11px; pointer-events: none; z-index: 1000; box-shadow: var(--shadow-md); white-space: nowrap; }
 .chart-tooltip-time { opacity: 0.7; font-size: 10px; margin-bottom: 2px; }
 .chart-tooltip-value { font-weight: 700; font-family: var(--font-mono); }
 </style>

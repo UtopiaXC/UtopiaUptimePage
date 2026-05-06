@@ -23,7 +23,19 @@ document.title = dashboardTitle;
 const { t } = useI18n();
 useTheme();
 
-const activeSourceIndex = ref(0);
+function getInitialSourceIndex() {
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get('tab');
+    if (tab) {
+        const num = parseInt(tab, 10);
+        if (num >= 1 && num <= dataSources.length) {
+            return num - 1;
+        }
+    }
+    return 0;
+}
+
+const activeSourceIndex = ref(getInitialSourceIndex());
 const viewMode = ref(localStorage.getItem('dashboard_view_preference') || defaultView);
 const isPaused = ref(false);
 const isLoading = ref(false);
@@ -98,13 +110,34 @@ function stopAutoRefresh() {
     }
 }
 
+function updateURL(index) {
+    const newSearch = index === 0 ? '' : `?tab=${index + 1}`;
+    if (window.location.search !== newSearch) {
+        window.history.pushState(null, '', window.location.pathname + newSearch);
+    }
+}
+
 function handleSourceSelect(index) {
+    if (activeSourceIndex.value === index) return;
     activeSourceIndex.value = index;
+    updateURL(index);
     monitors.value = [];
     groups.value = {};
     errorMessage.value = '';
     loadData();
     startAutoRefresh();
+}
+
+function handlePopState() {
+    const index = getInitialSourceIndex();
+    if (index !== activeSourceIndex.value) {
+        activeSourceIndex.value = index;
+        monitors.value = [];
+        groups.value = {};
+        errorMessage.value = '';
+        loadData();
+        startAutoRefresh();
+    }
 }
 
 function handleTogglePause() {
@@ -134,11 +167,19 @@ function handleCloseDetail() {
 }
 
 onMounted(() => {
+    // Clean up ?tab=1 to just root, or ensure ?tab=N is strictly correct
+    const expectedSearch = activeSourceIndex.value === 0 ? '' : `?tab=${activeSourceIndex.value + 1}`;
+    if (window.location.search !== expectedSearch) {
+        window.history.replaceState(null, '', window.location.pathname + expectedSearch);
+    }
+    
+    window.addEventListener('popstate', handlePopState);
     loadData();
     startAutoRefresh();
 });
 
 onUnmounted(() => {
+    window.removeEventListener('popstate', handlePopState);
     stopAutoRefresh();
 });
 
@@ -174,10 +215,16 @@ watch(activeSourceIndex, () => {
                 <div class="loading-progress">
                     <div class="loading-progress-bar"></div>
                 </div>
-                <div class="loading-grid">
-                    <div v-for="i in 4" :key="i" class="skeleton-card">
+                <div v-if="viewMode === 'card'" class="loading-grid">
+                    <div v-for="i in 1" :key="i" class="skeleton-card">
                         <div class="skeleton skeleton-header"></div>
                         <div class="skeleton skeleton-badges"></div>
+                        <div class="skeleton skeleton-bars"></div>
+                    </div>
+                </div>
+                <div v-else class="loading-list">
+                    <div class="skeleton-list-item">
+                        <div class="skeleton skeleton-header"></div>
                         <div class="skeleton skeleton-bars"></div>
                     </div>
                 </div>
@@ -290,6 +337,34 @@ watch(activeSourceIndex, () => {
 .skeleton-bars {
     height: 32px;
     width: 100%;
+}
+
+.loading-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.skeleton-list-item {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-lg);
+    padding: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+}
+
+.skeleton-list-item .skeleton-header {
+    height: 24px;
+    width: 150px;
+}
+
+.skeleton-list-item .skeleton-bars {
+    height: 32px;
+    flex: 1;
+    max-width: 300px;
 }
 
 /* Error state */
