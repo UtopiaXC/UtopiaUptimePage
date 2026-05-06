@@ -172,18 +172,36 @@ async def list_monitors():
     """List all monitors with basic metadata."""
     if not database:
         raise HTTPException(status_code=503, detail="Database mode is not enabled")
-    query = "SELECT * FROM monitor WHERE active = 1 ORDER BY name ASC"
+    query = "SELECT * FROM monitor WHERE active = 1"
     try:
         rows = await database.fetch_all(query)
     except Exception as e:
         print(f"Error fetching monitors: {e}")
         return {"monitors": []}
     
-    # Pre-calculate groups if 'parent' or group logic applies
-    groups = {row["id"]: row["name"] for row in rows if dict(row).get("type") == "group"}
+    # Build group dictionary for lookups
+    groups = {row["id"]: dict(row) for row in rows if dict(row).get("type") == "group"}
+
+    # Sort logic matching user request:
+    # 1. Grouped items come before default/ungrouped items
+    # 2. Group weight ASC
+    # 3. Group ID ASC (to keep same-weight groups together)
+    # 4. Monitor ID ASC (inside group)
+    def get_sort_key(row):
+        r = dict(row)
+        parent_id = r.get("parent")
+        monitor_id = r.get("id") or 0
+        
+        if parent_id and parent_id in groups:
+            group_weight = groups[parent_id].get("weight") or 0
+            return (0, group_weight, parent_id, monitor_id)
+        else:
+            return (1, 0, 0, monitor_id)
+            
+    sorted_rows = sorted(rows, key=get_sort_key)
 
     monitors = []
-    for row in rows:
+    for row in sorted_rows:
         r = dict(row)
         monitor_type = r.get("type") or ""
         # Skip 'group' type monitors
@@ -218,7 +236,7 @@ async def list_monitors():
         group_name = ""
         parent_id = r.get("parent")
         if parent_id and parent_id in groups:
-            group_name = groups[parent_id]
+            group_name = groups[parent_id].get("name", "")
 
         # Get TLS/cert info (domain expiry + cert expiry)
         cert_expiry_days = None
